@@ -8,13 +8,13 @@ import java.util.List;
 
 class FoodItem {
     String name;
-    double calories;
-    double[] nutrients; // Par exemple, vitamines et minéraux
+    double calories; // Calories par portion
+    double vitaminC; // Vitamine C par portion en mg
 
-    public FoodItem(String name, double calories, double[] nutrients) {
+    public FoodItem(String name, double calories, double vitaminC) {
         this.name = name;
         this.calories = calories;
-        this.nutrients = nutrients;
+        this.vitaminC = vitaminC;
     }
 }
 
@@ -22,21 +22,22 @@ public class MealPlanner {
     public static void main(String[] args) {
         // Étape 1 : Définir vos aliments
         List<FoodItem> foodItems = new ArrayList<>();
-        foodItems.add(new FoodItem("Pomme", 52, new double[]{5, 0.1})); // [vitamine C, potassium]
-        foodItems.add(new FoodItem("Banane", 89, new double[]{6, 0.4}));
-        foodItems.add(new FoodItem("Poulet", 239, new double[]{0, 0.6}));
-
+        foodItems.add(new FoodItem("Pomme", 52, 5)); // Pomme: 52 kcal, 5 mg de vitamine C
+        foodItems.add(new FoodItem("Banane", 89, 10)); // Banane: 89 kcal, 10 mg de vitamine C
+        foodItems.add(new FoodItem("Poulet", 239, 0)); // Poulet: 239 kcal, 0 mg de vitamine C
+        
         // Étape 2 : Préparer les données d'entrée
-        double[][] inputData = new double[foodItems.size()][];
+        double[][] inputData = new double[foodItems.size()][2]; // [calories, vitamine C]
         for (int i = 0; i < foodItems.size(); i++) {
             FoodItem item = foodItems.get(i);
-            inputData[i] = new double[]{item.calories}; // Utiliser uniquement les calories pour cet exemple
+            inputData[i][0] = item.calories; // Calories
+            inputData[i][1] = item.vitaminC; // Vitamine C
         }
 
         // Étape 3 : Créer le modèle TensorFlow
         try (Graph graph = Graph.create()) {
             // Définir l'entrée du modèle
-            Tensor<Double> inputTensor = Tensor.create(Shape.of(foodItems.size(), 1), inputData);
+            Tensor<Double> inputTensor = Tensor.create(Shape.of(foodItems.size(), 2), inputData);
             
             // Créer une session pour exécuter le modèle
             try (Session session = new Session(graph)) {
