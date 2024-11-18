@@ -55,9 +55,9 @@ public class MealPlanner {
 
             // Couche cachée : Dense Layer avec activation ReLU
             var hiddenLayer = graph.opBuilder("Dense", "hidden_layer")
-                    .addInput(inputPlaceholder)
-                    .setAttr("units", 64)
-                    .setAttr("activation", "relu")
+                    .addInput(inputPlaceholder) //Creation de la couche avec le paceholder définit plus haut
+                    .setAttr("units", 64) //nombre de neurones dans la couche dense
+                    .setAttr("activation", "relu") // fonction d'activation ReLU (Rectified Linear Unit), qui est couramment utilisée dans les réseaux de neurones car elle aide à introduire de la non-linéarité dans le modèle tout en étant efficace en termes de calcul.
                     .build().output(0);
 
             // Couche de sortie : Dense Layer pour prédire les quantités
