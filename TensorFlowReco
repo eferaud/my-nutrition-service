@@ -1,0 +1,58 @@
+import org.tensorflow.Graph;
+import org.tensorflow.Session;
+import org.tensorflow.Tensor;
+import org.tensorflow.ndarray.Shape;
+
+import java.util.ArrayList;
+import java.util.List;
+
+class FoodItem {
+    String name;
+    double calories;
+    double[] nutrients; // Par exemple, vitamines et minéraux
+
+    public FoodItem(String name, double calories, double[] nutrients) {
+        this.name = name;
+        this.calories = calories;
+        this.nutrients = nutrients;
+    }
+}
+
+public class MealPlanner {
+    public static void main(String[] args) {
+        // Étape 1 : Définir vos aliments
+        List<FoodItem> foodItems = new ArrayList<>();
+        foodItems.add(new FoodItem("Pomme", 52, new double[]{5, 0.1})); // [vitamine C, potassium]
+        foodItems.add(new FoodItem("Banane", 89, new double[]{6, 0.4}));
+        foodItems.add(new FoodItem("Poulet", 239, new double[]{0, 0.6}));
+
+        // Étape 2 : Préparer les données d'entrée
+        double[][] inputData = new double[foodItems.size()][];
+        for (int i = 0; i < foodItems.size(); i++) {
+            FoodItem item = foodItems.get(i);
+            inputData[i] = new double[]{item.calories}; // Utiliser uniquement les calories pour cet exemple
+        }
+
+        // Étape 3 : Créer le modèle TensorFlow
+        try (Graph graph = Graph.create()) {
+            // Définir l'entrée du modèle
+            Tensor<Double> inputTensor = Tensor.create(Shape.of(foodItems.size(), 1), inputData);
+            
+            // Créer une session pour exécuter le modèle
+            try (Session session = new Session(graph)) {
+                // Ajouter une couche simple pour la démonstration
+                // Ici nous allons juste multiplier par un facteur (simulant une opération)
+                Tensor<Double> outputTensor = session.runner()
+                        .fetch("output") // Remplacez par le nom de votre nœud de sortie
+                        .feed("input", inputTensor) // Remplacez par le nom de votre nœud d'entrée
+                        .run().get(0);
+
+                // Afficher les résultats
+                System.out.println("Quantités d'aliments recommandées :");
+                for (int i = 0; i < foodItems.size(); i++) {
+                    System.out.printf("%s: %.2f g%n", foodItems.get(i).name, outputTensor.copyTo(new double[1])[i]);
+                }
+            }
+        }
+    }
+}
