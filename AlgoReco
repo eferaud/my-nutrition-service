@@ -1,0 +1,80 @@
+import org.apache.commons.math3.optimization.PointValuePair;
+import org.apache.commons.math3.optimization.linear.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+class FoodItem {
+    String name;
+    double calories;
+    double[] nutrients; // Par exemple, vitamines et minéraux
+
+    public FoodItem(String name, double calories, double[] nutrients) {
+        this.name = name;
+        this.calories = calories;
+        this.nutrients = nutrients;
+    }
+}
+
+public class MealPlanner {
+    public static void main(String[] args) {
+        // Étape 1 : Définir les aliments avec leurs valeurs nutritionnelles
+        List<FoodItem> allFoodItems = new ArrayList<>();
+        allFoodItems.add(new FoodItem("Pomme", 52, new double[]{0.5, 0.1})); // Exemple : [vitamine C, potassium]
+        allFoodItems.add(new FoodItem("Banane", 89, new double[]{0.7, 0.4}));
+        allFoodItems.add(new FoodItem("Poulet", 239, new double[]{0.0, 0.6}));
+
+        // Étape 2 : Créer les tableaux pour l'optimisation
+        int n = allFoodItems.size();
+        double[] calories = new double[n];
+        double[][] nutrients = new double[n][2]; // Supposons 2 nutriments
+
+        for (int i = 0; i < n; i++) {
+            calories[i] = allFoodItems.get(i).calories;
+            nutrients[i] = allFoodItems.get(i).nutrients;
+        }
+
+        // Étape 3 : Définir les objectifs caloriques et les AJR
+        double targetCalories = 2000; // Exemple d'objectif calorique
+        double[] targetNutrients = {100, 50}; // AJR pour chaque vitamine/minéral
+
+        // Étape 4 : Créer le problème d'optimisation
+        LinearObjectiveFunction objectiveFunction = new LinearObjectiveFunction(calories, 0);
+        
+        // Contraintes (calories et nutriments)
+        Collection<LinearConstraint> constraints = new ArrayList<>();
+        constraints.add(new LinearConstraint(calories, Relationship.EQ, targetCalories));
+        
+        for (int i = 0; i < targetNutrients.length; i++) {
+            constraints.add(new LinearConstraint(nutrients[i], Relationship.GEQ, targetNutrients[i]));
+        }
+
+        // Étape 5 : Créer des variables de décision pour chaque aliment
+        RealVariable[] variables = new RealVariable[n];
+        
+        for (int i = 0; i < n; i++) {
+            variables[i] = new RealVariable("x" + i); // x0 pour Pomme, x1 pour Banane, etc.
+            objectiveFunction.setCoefficient(variables[i], calories[i]);
+            constraints.add(new LinearConstraint(new double[]{1}, Relationship.GE, 0)); // x >= 0
+        }
+
+        // Étape 6 : Résoudre le problème
+        SimplexSolver solver = new SimplexSolver();
+        PointValuePair solution = solver.optimize(objectiveFunction, constraints);
+
+        // Étape 7 : Afficher le plan alimentaire avec les quantités
+        System.out.println("Plan alimentaire optimal trouvé !");
+        
+        if (solution != null) {
+            for (int i = 0; i < n; i++) {
+                double quantity = solution.getPoint()[i]; // Quantité en grammes de l'aliment i
+                if (quantity > 0) { // Afficher uniquement les aliments sélectionnés
+                    System.out.println(allFoodItems.get(i).name + ": " + quantity + " g");
+                }
+            }
+            System.out.println("Valeur totale des calories: " + solution.getValue());
+        } else {
+            System.out.println("Aucune solution trouvée.");
+        }
+    }
+}
