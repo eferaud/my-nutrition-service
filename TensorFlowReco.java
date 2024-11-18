@@ -174,3 +174,186 @@ public class MealPlanner {
 
     
 }
+
+
+
+
+
+
+
+
+
+
+// Entrées
+double targetCalories = 2000; // Objectif calorique
+List<String> foodsToAvoid = Arrays.asList("AlimentA", "AlimentB"); // Aliments à éviter
+
+// Base de données d'aliments (exemple simplifié)
+List<FoodItem> foodDatabase = loadFoodDatabase(); // Chargez vos aliments avec calories et vitamine C
+
+// Préparation des données d'entrée
+double[] inputFeatures = new double[1 + foodsToAvoid.size()]; // 1 pour l'objectif + taille de la liste d'évitement
+inputFeatures[0] = targetCalories; // Objectif calorique
+
+for (int i = 0; i < foodsToAvoid.size(); i++) {
+    inputFeatures[i + 1] = foodsToAvoid.get(i); // Indiquez les aliments à éviter (peut-être sous forme binaire)
+}
+
+// Exécution du modèle
+Tensor<Double> inputTensor = Tensor.create(Shape.of(1, inputFeatures.length), inputFeatures);
+Tensor<Double> outputTensor = session.runner()
+        .feed("inputNode", inputTensor)
+        .fetch("outputNode")
+        .run().get(0);
+
+// Traitement des résultats pour obtenir la liste des aliments recommandés
+List<FoodItem> recommendedFoods = processOutput(outputTensor, foodDatabase);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import org.tensorflow.Graph;
+import org.tensorflow.Session;
+import org.tensorflow.Tensor;
+import org.tensorflow.ndarray.Shape;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+class FoodItem {
+    String name;
+    double calories; // Calories par portion
+    double vitaminC; // Vitamine C par portion en mg
+
+    public FoodItem(String name, double calories, double vitaminC) {
+        this.name = name;
+        this.calories = calories;
+        this.vitaminC = vitaminC;
+    }
+}
+
+public class MealPlanner {
+    public static void main(String[] args) {
+        // Étape 1 : Définir vos aliments (base de données)
+        List<FoodItem> foodDatabase = new ArrayList<>();
+        foodDatabase.add(new FoodItem("Pomme", 52, 5));
+        foodDatabase.add(new FoodItem("Banane", 89, 10));
+        foodDatabase.add(new FoodItem("Poulet", 239, 0));
+        // Ajoutez d'autres aliments ici...
+
+        // Étape 2 : Paramètres d'entraînement
+        int epochs = 1000; // Nombre d'époques pour l'entraînement
+        double learningRate = 0.01; // Taux d'apprentissage
+
+        try (Graph graph = Graph.create()) {
+            // Étape 3 : Créer le modèle TensorFlow
+            String inputNodeName = "inputNode";
+            String outputNodeName = "outputNode";
+
+            // Placeholder pour les entrées
+            var inputPlaceholder = graph.opBuilder("Placeholder", inputNodeName)
+                    .setAttr("dtype", org.tensorflow.DataType.DOUBLE)
+                    .setAttr("shape", Shape.of(-1, foodDatabase.size() + 1)) // Objectif calorique + aliments
+                    .build().output(0);
+
+            // Couche cachée
+            var hiddenLayer = graph.opBuilder("Dense", "hidden_layer")
+                    .addInput(inputPlaceholder)
+                    .setAttr("units", 64)
+                    .setAttr("activation", "relu")
+                    .build().output(0);
+
+            // Couche de sortie
+            var outputLayer = graph.opBuilder("Dense", outputNodeName)
+                    .addInput(hiddenLayer)
+                    .setAttr("units", foodDatabase.size()) // Sortie pour chaque aliment
+                    .setAttr("activation", "linear") // Prédictions continues
+                    .build().output(0);
+
+            try (Session session = new Session(graph)) {
+                // Étape 4 : Boucle d'entraînement
+                for (int epoch = 0; epoch < epochs; epoch++) {
+                    double targetCalories = getVariableCaloricGoal(epoch); // Méthode pour obtenir un objectif variable
+                    List<String> foodsToAvoid = Arrays.asList("AlimentA", "AlimentB"); // Exemple d'aliments à éviter
+
+                    // Préparer les données d'entrée
+                    double[] inputFeatures = new double[1 + foodDatabase.size()]; // Objectif + aliments
+                    inputFeatures[0] = targetCalories; // Objectif calorique
+
+                    for (int i = 0; i < foodDatabase.size(); i++) {
+                        if (!foodsToAvoid.contains(foodDatabase.get(i).name)) {
+                            inputFeatures[i + 1] = foodDatabase.get(i).calories; // Calories des aliments non évités
+                        } else {
+                            inputFeatures[i + 1] = 0; // Mettre à zéro les aliments à éviter
+                        }
+                    }
+
+                    Tensor<Double> inputTensor = Tensor.create(Shape.of(1, inputFeatures.length), inputFeatures);
+                    
+                    // Cibles - ici vous devez définir comment calculer les cibles basées sur votre logique
+                    double[] targetQuantities = calculateTargetQuantities(targetCalories, foodDatabase);
+                    Tensor<Double> targetTensor = Tensor.create(Shape.of(1, targetQuantities.length), targetQuantities);
+
+                    // Exécuter le modèle
+                    List<Tensor<?>> results = session.runner()
+                            .feed(inputNodeName, inputTensor)
+                            .feed("target", targetTensor) // Nom du nœud cible à définir dans votre graphe
+                            .fetch(outputNodeName)
+                            .run();
+
+                    Tensor<Double> outputTensor = results.get(0);
+
+                    // Calculer la perte et mettre à jour les poids (implémentation simplifiée)
+                    double loss = calculateLoss(outputTensor, targetTensor); 
+                    
+                    session.runner()
+                            .addTarget("optimizer") // Nom du nœud de l'optimiseur à définir dans votre graphe
+                            .feed(inputNodeName, inputTensor)
+                            .feed("target", targetTensor)
+                            .run();
+
+                    if (epoch % 100 == 0) {
+                        System.out.printf("Epoch: %d, Loss: %.4f%n", epoch, loss);
+                    }
+                }
+            }
+        }
+    }
+
+    private static double getVariableCaloricGoal(int epoch) {
+        return 2000 + (epoch % 100); // Exemple : objectif variable basé sur l'époque
+    }
+
+    private static double[] calculateTargetQuantities(double targetCalories, List<FoodItem> foodItems) {
+        double[] quantities = new double[foodItems.size()];
+        
+        for (int i = 0; i < foodItems.size(); i++) {
+            quantities[i] = (foodItems.get(i).calories / targetCalories) * targetCalories; 
+        }
+
+        return quantities;
+    }
+
+    private static double calculateLoss(Tensor<Double> outputTensor, Tensor<Double> targetTensor) {
+        // Implémentez votre logique de calcul de perte ici (par exemple MSE)
+        return Math.random(); // Remplacez par le calcul réel de la perte
+    }
+}
