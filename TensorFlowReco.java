@@ -34,39 +34,40 @@ public class MealPlanner {
             inputData[i][1] = item.vitaminC; // Vitamine C
         }
 
-        // Étape 3 : Créer le modèle TensorFlow
+        // Étape 3 : Définir les objectifs
+        double targetCalories = 2000; // Objectif calorique
+        double targetVitaminC = 2000; // Objectif en vitamine C
+
+        // Étape 4 : Créer le modèle TensorFlow
         try (Graph graph = Graph.create()) {
-            // Définir les nœuds d'entrée et de sortie
             String inputNodeName = "input"; 
             String outputNodeName = "output"; 
 
-            // Créer des placeholders pour l'entrée et la sortie
             Tensor<Double> inputTensor = Tensor.create(Shape.of(foodItems.size(), 2), inputData);
 
-            // Ajouter des opérations au graphe pour créer le modèle
-            // Couche d'entrée : Placeholder pour les entrées
+            // Créer des placeholders pour l'entrée et la sortie
             var inputPlaceholder = graph.opBuilder("Placeholder", inputNodeName)
                     .setAttr("dtype", org.tensorflow.DataType.DOUBLE)
-                    .setAttr("shape", Shape.of(-1, 2)) // Deux caractéristiques : calories et vitamine C
+                    .setAttr("shape", Shape.of(-1, 2)) 
                     .build().output(0);
 
-            // Couche cachée : Dense Layer (par exemple avec 64 neurones)
+            // Couche cachée : Dense Layer avec activation ReLU
             var hiddenLayer = graph.opBuilder("Dense", "hidden_layer")
                     .addInput(inputPlaceholder)
                     .setAttr("units", 64)
                     .setAttr("activation", "relu")
                     .build().output(0);
 
-            // Couche de sortie : Dense Layer pour prédire les quantités (par exemple pour chaque aliment)
+            // Couche de sortie : Dense Layer pour prédire les quantités
             var outputLayer = graph.opBuilder("Dense", outputNodeName)
                     .addInput(hiddenLayer)
-                    .setAttr("units", foodItems.size()) // Une sortie par aliment
-                    .setAttr("activation", "linear") // Pas d'activation pour la sortie des quantités
+                    .setAttr("units", foodItems.size()) 
+                    .setAttr("activation", "linear") 
                     .build().output(0);
 
             try (Session session = new Session(graph)) {
                 // Simuler l'entraînement (ici nous ne faisons pas encore d'entraînement réel)
-                for (int epoch = 0; epoch < 100; epoch++) { // Nombre d'époques à ajuster
+                for (int epoch = 0; epoch < 100; epoch++) { 
                     session.runner()
                             .feed(inputNodeName, inputTensor)
                             .fetch(outputNodeName)
@@ -83,7 +84,42 @@ public class MealPlanner {
                 for (int i = 0; i < foodItems.size(); i++) {
                     System.out.printf("%s: %.2f g%n", foodItems.get(i).name, outputTensor.copyTo(new double[1])[i]);
                 }
+
+                // Vérifiez si les résultats atteignent les objectifs
+                double totalCalories = calculateTotalCalories(outputTensor);
+                double totalVitaminC = calculateTotalVitaminC(outputTensor, foodItems);
+                
+                System.out.printf("Total Calories: %.2f g%n", totalCalories);
+                System.out.printf("Total Vitamin C: %.2f g%n", totalVitaminC);
+                
+                if(totalCalories >= targetCalories) {
+                    System.out.println("Objectif calorique atteint !");
+                } else {
+                    System.out.println("Objectif calorique non atteint.");
+                }
+                
+                if(totalVitaminC >= targetVitaminC) {
+                    System.out.println("Objectif en vitamine C atteint !");
+                } else {
+                    System.out.println("Objectif en vitamine C non atteint.");
+                }
             }
         }
+    }
+
+    private static double calculateTotalCalories(Tensor<Double> outputTensor) {
+        double totalCalories = 0.0;
+        for(int i=0; i<outputTensor.shape(0); i++) {
+            totalCalories += outputTensor.copyTo(new double[1])[i]; // Remplacez par la logique pour calculer les calories totales
+        }
+        return totalCalories;
+    }
+
+    private static double calculateTotalVitaminC(Tensor<Double> outputTensor, List<FoodItem> foodItems) {
+        double totalVitaminC = 0.0;
+        for(int i=0; i<outputTensor.shape(0); i++) {
+            totalVitaminC += outputTensor.copyTo(new double[1])[i] * foodItems.get(i).vitaminC / 100; // Ajustez selon la quantité en grammes
+        }
+        return totalVitaminC;
     }
 }
