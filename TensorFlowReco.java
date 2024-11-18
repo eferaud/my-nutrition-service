@@ -124,4 +124,53 @@ public class MealPlanner {
         }
         return totalVitaminC;
     }
+
+    private void train() {
+        try (Session session = new Session(graph)) {
+            // Nombre d'époques pour l'entraînement
+            int epochs = 1000; 
+            double learningRate = 0.01; // Taux d'apprentissage
+        
+            // Boucle d'entraînement
+            for (int epoch = 0; epoch < epochs; epoch++) {
+                // Définir un objectif calorique variable
+                double targetCalories = getVariableCaloricGoal(epoch); //TODO Implémentez cette méthode pour définir l'objectif calorique
+        
+                // Préparer les données d'entrée
+                Tensor<Double> inputTensor = Tensor.create(Shape.of(foodItems.size(), 2), inputData);
+                
+                // Calculer les cibles basées sur l'objectif calorique
+                double[] targetQuantities = calculateTargetQuantities(targetCalories, foodItems); // Implémentez cette méthode
+        
+                Tensor<Double> targetTensor = Tensor.create(Shape.of(foodItems.size()), targetQuantities);
+        
+                // Exécuter le modèle
+                List<Tensor<?>> results = session.runner()
+                        .feed(inputNodeName, inputTensor)
+                        .feed("target", targetTensor) // Nom du nœud cible à définir dans votre graphe
+                        .fetch(outputNodeName)
+                        .run();
+        
+                // Récupérer les prédictions
+                Tensor<Double> outputTensor = results.get(0);
+        
+                // Calculer la perte
+                double loss = calculateLoss(outputTensor, targetTensor); // Implémentez cette méthode pour calculer la perte
+        
+                // Mettre à jour les poids (cela dépendra de votre configuration)
+                session.runner()
+                        .addTarget("optimizer") // Nom du nœud de l'optimiseur à définir dans votre graphe
+                        .feed(inputNodeName, inputTensor)
+                        .feed("target", targetTensor)
+                        .run();
+        
+                // Afficher la perte tous les 100 epochs
+                if (epoch % 100 == 0) {
+                    System.out.printf("Epoch: %d, Loss: %.4f%n", epoch, loss);
+                }
+            }
+        }
+    }
+
+    
 }
