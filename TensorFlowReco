@@ -26,37 +26,49 @@ public class MealPlanner {
         foodItems.add(new FoodItem("Banane", 89, 10)); // Banane: 89 kcal, 10 mg de vitamine C
         foodItems.add(new FoodItem("Poulet", 239, 0)); // Poulet: 239 kcal, 0 mg de vitamine C
 
-        // Étape 2 : Préparer les données d'entrée et les cibles
+        // Étape 2 : Préparer les données d'entrée
         double[][] inputData = new double[foodItems.size()][2]; // [calories, vitamine C]
-        double[] targetQuantities = new double[foodItems.size()]; // Quantités cibles en grammes
-
         for (int i = 0; i < foodItems.size(); i++) {
             FoodItem item = foodItems.get(i);
             inputData[i][0] = item.calories; // Calories
             inputData[i][1] = item.vitaminC; // Vitamine C
-            targetQuantities[i] = 100; // Exemple : on veut consommer 100g de chaque aliment (à ajuster selon vos besoins)
         }
 
         // Étape 3 : Créer le modèle TensorFlow
         try (Graph graph = Graph.create()) {
             // Définir les nœuds d'entrée et de sortie
-            String inputNodeName = "input";
-            String outputNodeName = "output";
+            String inputNodeName = "input"; 
+            String outputNodeName = "output"; 
 
             // Créer des placeholders pour l'entrée et la sortie
             Tensor<Double> inputTensor = Tensor.create(Shape.of(foodItems.size(), 2), inputData);
-            Tensor<Double> targetTensor = Tensor.create(Shape.of(foodItems.size()), targetQuantities);
 
-            // Exemple simple : définir une opération linéaire pour la sortie
+            // Ajouter des opérations au graphe pour créer le modèle
+            // Couche d'entrée : Placeholder pour les entrées
+            var inputPlaceholder = graph.opBuilder("Placeholder", inputNodeName)
+                    .setAttr("dtype", org.tensorflow.DataType.DOUBLE)
+                    .setAttr("shape", Shape.of(-1, 2)) // Deux caractéristiques : calories et vitamine C
+                    .build().output(0);
+
+            // Couche cachée : Dense Layer (par exemple avec 64 neurones)
+            var hiddenLayer = graph.opBuilder("Dense", "hidden_layer")
+                    .addInput(inputPlaceholder)
+                    .setAttr("units", 64)
+                    .setAttr("activation", "relu")
+                    .build().output(0);
+
+            // Couche de sortie : Dense Layer pour prédire les quantités (par exemple pour chaque aliment)
+            var outputLayer = graph.opBuilder("Dense", outputNodeName)
+                    .addInput(hiddenLayer)
+                    .setAttr("units", foodItems.size()) // Une sortie par aliment
+                    .setAttr("activation", "linear") // Pas d'activation pour la sortie des quantités
+                    .build().output(0);
+
             try (Session session = new Session(graph)) {
-                // Ajoutez ici votre logique pour construire le modèle,
-                // par exemple, ajouter des couches denses ou autres opérations
-
                 // Simuler l'entraînement (ici nous ne faisons pas encore d'entraînement réel)
                 for (int epoch = 0; epoch < 100; epoch++) { // Nombre d'époques à ajuster
                     session.runner()
                             .feed(inputNodeName, inputTensor)
-                            .feed("target", targetTensor) // Nom du nœud cible à définir dans votre graphe
                             .fetch(outputNodeName)
                             .run();
                 }
