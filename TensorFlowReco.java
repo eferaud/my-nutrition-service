@@ -46,9 +46,11 @@ public class MealPlanner {
             Tensor<Double> inputTensor = Tensor.create(Shape.of(foodItems.size(), 2), inputData);
 
             // Créer des placeholders pour l'entrée et la sortie
+            //Un placeholder est un type de nœud dans TensorFlow qui permet de définir une variable d'entrée pour votre modèle.
+            //Il ne contient pas de données lui-même, mais il attend que des données soient fournies lors de l'exécution du modèle.
             var inputPlaceholder = graph.opBuilder("Placeholder", inputNodeName)
-                    .setAttr("dtype", org.tensorflow.DataType.DOUBLE)
-                    .setAttr("shape", Shape.of(-1, 2)) 
+                    .setAttr("dtype", org.tensorflow.DataType.DOUBLE) //Type de valeurs en entrées (ici des mg ou kcal, on utlise le type double)
+                    .setAttr("shape", Shape.of(-1, 2)) // le placeholder peut accepter un nombre variable d'exemples (d'où le -1) et deux caractéristiques par exemple (calories et vitamine C)
                     .build().output(0);
 
             // Couche cachée : Dense Layer avec activation ReLU
