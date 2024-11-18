@@ -63,8 +63,8 @@ public class MealPlanner {
             // Couche de sortie : Dense Layer pour prédire les quantités
             var outputLayer = graph.opBuilder("Dense", outputNodeName)
                     .addInput(hiddenLayer)
-                    .setAttr("units", foodItems.size()) 
-                    .setAttr("activation", "linear") 
+                    .setAttr("units", foodItems.size())  //Nombre de neurone en sortie (ie nbr d'aliments proposés). Faut pas en prendre trop donc
+                    .setAttr("activation", "linear") //approprié lorsque vous souhaitez prédire des valeurs continues (comme des quantités en grammes)
                     .build().output(0);
 
             try (Session session = new Session(graph)) {
